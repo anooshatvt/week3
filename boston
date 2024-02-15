@@ -1,0 +1,56 @@
+import pandas as pd
+import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
+from sklearn.preprocessing import StandardScaler
+
+# Load the dataset
+boston_data = pd.read_csv("HousingData.csv")
+
+# Display the first few rows of the dataset
+print(boston_data.head())
+
+# Separate features (X) and target variable (y)
+X = boston_data.drop(columns=["MEDV"])  # Replaced "medv" with "MEDV"
+y = boston_data["MEDV"]  # Replaced "medv" with "MEDV"
+
+# Find the attribute that best correlates with the target variable
+correlation_coeffs = np.abs(boston_data.corr()["MEDV"]).drop("MEDV")  # Replaced "medv" with "MEDV"
+best_feature_name = correlation_coeffs.idxmax()
+print(f"The attribute that best correlates with the output price is: {best_feature_name}")
+
+# Standardize the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Add bias term to the features
+X_with_bias = np.c_[np.ones((X_scaled.shape[0], 1)), X_scaled]
+
+# Analytic solution for linear regression coefficients
+analytic_solution = np.linalg.inv(X_with_bias.T.dot(X_with_bias)).dot(X_with_bias.T).dot(y)
+
+print("Analytic solution coefficients:", analytic_solution)
+
+class LinearRegressionGradientDescent():
+    def __init__(self, lr=0.0001, max_iter=10000, tolerance=1e-6):
+        self.lr = lr
+        self.max_iter = max_iter
+        self.tolerance = tolerance
+
+    def fit(self, X, y):
+        self.weights = np.zeros(X.shape[1] + 1)  # Initialize weights with bias term
+        for _ in range(self.max_iter):
+            # Compute gradients
+            gradients = -2 * X.T.dot(y - X.dot(self.weights[1:]) - self.weights[0])
+            if np.all(np.abs(gradients) < self.tolerance):
+                break
+            # Update weights
+            self.weights -= self.lr * gradients
+
+    def predict(self, X):
+        return np.dot(X, self.weights[1:]) + self.weights[0]
+
+# Instantiate and fit the gradient descent model (full batch)
+lr_full_batch_scaled = LinearRegressionGradientDescent()
+lr_full_batch_scaled.fit(X_with_bias, y)
+print("Gradient descent (Full-batch) coefficients (scaled features):", lr_full_batch_scaled.weights)
